@@ -121,6 +121,5 @@ tb_salida
 tb_salida[, mean(ganancia_test)]
 
 # calculo todos los promedios
-tb_salida[, lapply(.SD, mean)]
-
+S
 # desvio estandar Distribucion Binomial   sqrt( n * p * (1-p) )
