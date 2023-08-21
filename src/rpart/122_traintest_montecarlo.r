@@ -90,9 +90,9 @@ dataset <- dataset[clase_ternaria != ""]
 
 param_basicos <- list(
   "cp" = -1, # complejidad minima
-  "minsplit" = 900, # minima cant de registros en un nodo para hacer el split
-  "minbucket" = 440, # minima cantidad de registros en una hoja
-  "maxdepth" = 5
+  "minsplit" = 100, # minima cant de registros en un nodo para hacer el split
+  "minbucket" = 10, # minima cantidad de registros en una hoja
+  "maxdepth" = 10
 ) # profundidad máxima del arbol
 
 # Un solo llamado, con la semilla 17
