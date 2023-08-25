@@ -13,15 +13,17 @@ PARAM <- list()
 # reemplazar por las propias semillas
 PARAM$semillas <- c(700561, 333233, 911111, 311111, 301057)
 
+
 #------------------------------------------------------------------------------
 # particionar agrega una columna llamada fold a un dataset
 #  que consiste en una particion estratificada segun agrupa
-# particionar( data=dataset, division=c(70,30), agrupa=clase_ternaria, seed=semilla)
+# particionar( data=dataset, division=c(70,30), agrupa=clase_binaria1, seed=semilla)
 #   crea una particion 70, 30
-
-particionar <- function(data, division, agrupa = "clase_binaria1", campo = "fold", start = 1, seed = NA) {
+particionar <- function(
+  data, division, agrupa = "",
+  campo = "fold", start = 1, seed = NA) {
   if (!is.na(seed)) set.seed(seed)
-
+  
   bloque <- unlist(mapply(function(x, y) {
     rep(y, x)
   }, division, seq(from = start, length.out = length(division))))
@@ -32,12 +34,12 @@ particionar <- function(data, division, agrupa = "clase_binaria1", campo = "fold
 }
 #------------------------------------------------------------------------------
 
-ArbolEstimarGanancia <- function(semillas, param_basicos) {
+ArbolEstimarGanancia <- function(semilla, param_basicos) {
   # particiono estratificadamente el dataset
-    particionar(dataset, division = c(7, 3), agrupa = "clase_binaria1", seed = semilla)
+  particionar(dataset, division = c(7, 3), agrupa = "clase_binaria1", seed = semilla)
 
   # genero el modelo
-  # quiero predecir clase_binaria a partir del resto
+  # quiero predecir clase_binaria1 a partir del resto
   modelo <- rpart("clase_binaria1 ~ .",
     data = dataset[fold == 1], # fold==1  es training,  el 70% de los datos
     xval = 0,
@@ -50,16 +52,15 @@ ArbolEstimarGanancia <- function(semillas, param_basicos) {
     type = "prob"
   ) # type= "prob"  es que devuelva la probabilidad
 
-  # prediccion es una matriz con TRES columnas,
-  #  llamadas "BAJA+1", "BAJA+2"  y "CONTINUA"
+  # prediccion es una matriz con 2 columnas, llamadas "Neg" y "Pos"
   # cada columna es el vector de probabilidades
-
+  
 
   # calculo la ganancia en testing  qu es fold==2
   ganancia_test <- dataset[
     fold == 2,
-    sum(ifelse(prediccion[, "BAJA+2"] > 0.025,
-      ifelse(clase_binaria1 == "BAJA+2", 117000, -3000),
+    sum(ifelse(prediccion[, "Pos"] > 0.025,
+      ifelse(clase_binaria1 == "Pos", 117000, -3000),
       0
     ))
   ]
@@ -95,19 +96,19 @@ setwd("~/buckets/b1/") # Establezco el Working Directory
 # cargo los datos
 dataset <- fread("./datasets/dataset_pequeno.csv")
 
+# trabajo solo con los datos con clase, es decir 202107
+dataset <- dataset[clase_ternaria != ""]
+
 # Crear la nueva columna 
 dataset$clase_binaria1 <- ifelse(dataset$clase_ternaria %in% c("BAJA+1", "CONTINUA"), "Neg", "Pos")
 dataset$clase_ternaria <- NULL
-
-# trabajo solo con los datos con clase, es decir 202107
-dataset <- dataset[clase_ternaria != ""]
 
 # genero el archivo para Kaggle
 # creo la carpeta donde va el experimento
 # HT  representa  Hiperparameter Tuning
 dir.create("./exp/", showWarnings = FALSE)
 dir.create("./exp/HT2020/", showWarnings = FALSE)
-archivo_salida <- "./exp/HT2020_01/gridsearch.txt"
+archivo_salida <- "./exp/HT2020/gridsearch01.txt"
 
 # Escribo los titulos al archivo donde van a quedar los resultados
 # atencion que si ya existe el archivo, esta instruccion LO SOBREESCRIBE,
@@ -116,10 +117,10 @@ archivo_salida <- "./exp/HT2020_01/gridsearch.txt"
 cat(
   file = archivo_salida,
   sep = "",
+  "cp", "\t",
   "max_depth", "\t",
   "min_split", "\t",
   "min_bucket", "\t",
-  "min_cp", "\t",
   "ganancia_promedio", "\n"
 )
 
@@ -129,30 +130,37 @@ cat(
 for (vmax_depth in c(4, 8, 12, 16, 20, 24)) {
   for (vmin_split in c(1000, 800, 600, 400, 200, 100, 50, 20, 10)) {
     for (vmin_minbucket in c(20, 40, 60, 80, 100, 120)) {
-      for(vmin_cp in c(-0.6, -0.4, -0.2)) {
+      for(vmin_cp in c(-0.6, -0.4, 0)) {
     # notar como se agrega
 
-    # vminsplit  minima cantidad de registros en un nodo para hacer el split
-        param_basicos <- list(
-        "cp" = vmin_cp, # complejidad minima
-        "minsplit" = vmin_split,
-        "minbucket" = vmin_minbucket, # minima cantidad de registros en una hoja
-        "maxdepth" = vmax_depth
-        ) # profundidad máxima del arbol
+        
+       
+          
+
+
+# notar como se agrega
+
+# vminsplit  minima cantidad de registros en un nodo para hacer el split
+      param_basicos <- list(
+      "cp" = vmin_cp, # complejidad minima
+      "minsplit" = vmin_split,
+      "minbucket" = vmin_minbucket, # minima cantidad de registros en una hoja
+      "maxdepth" = vmax_depth
+    ) # profundidad mÃ¡xima del arbol
 
     # Un solo llamado, con la semilla 17
-        ganancia_promedio <- ArbolesMontecarlo(PARAM$semillas, param_basicos)
+    ganancia_promedio <- ArbolesMontecarlo(PARAM$semillas, param_basicos)
 
     # escribo los resultados al archivo de salida
-        cat(
-          file = archivo_salida,
-          append = TRUE,
-          sep = "",
-          vmax_depth, "\t",
-          vmin_split, "\t",
-          vmin_minbucket, "\t",
-          vmin_cp, "\t",
-          ganancia_promedio, "\n"
+    cat(
+      file = archivo_salida,
+      append = TRUE,
+      sep = "",
+      vmin_cp, "\t",
+      vmax_depth, "\t",
+      vmin_split, "\t",
+      vmin_minbucket, "\t",
+      ganancia_promedio, "\n"
         )
       }
     }
