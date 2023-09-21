@@ -208,7 +208,9 @@ Corregir_MachineLearning <- function(dataset) {
 }
 #------------------------------------------------------------------------------
 Corregir_Regresionlineal <- function(dataset) {
-  CorregirCampoMes(mice(df%>%select(thomebanking,202005), m = 1, maxit = 1, method = "norm.nob", seed = 700561))
+  selected_data <- dataset[foto_mes %in% c(202005), .(thomebanking, foto_mes)]
+  mice_output <- mice(selected_data, m = 1, maxit = 1, method = "norm.nob", seed = 700561)
+  dataset[, thomebanking := mice_output$thomebanking]
   #CorregirCampoMes("chomebanking_transacciones", c(201801, 201910, 202006))
   #CorregirCampoMes("tcallcenter", c(201801, 201806, 202006))
   #CorregirCampoMes("ccallcenter_transacciones", c(201801, 201806, 202006))
